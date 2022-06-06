@@ -57,7 +57,7 @@ abstract class Command extends SymfonyCommand
         try {
             [$this->input, $this->output] = [$input, $output];
 
-            if (! $this->confirmToPerform()) {
+            if (!$this->confirmToPerform()) {
                 return Command::FAILURE;
             }
 
@@ -135,7 +135,7 @@ abstract class Command extends SymfonyCommand
         // ConfirmationRequired
         if ($attribute = $reader->getClassMetadata(new \ReflectionClass($this), ConfirmationRequired::class)) {
             $definition = $this->container->get($attribute->class);
-            if (! $definition instanceof ConfirmationDefinitionInterface) {
+            if (!$definition instanceof ConfirmationDefinitionInterface) {
                 throw new CommandException(
                     \sprintf(
                         'Confirmation definition `%s` should be instance of `%s`.',
@@ -145,7 +145,7 @@ abstract class Command extends SymfonyCommand
                 );
             }
 
-            if (! $definition->shouldBeConfirmed()) {
+            if (!$definition->shouldBeConfirmed()) {
                 return true;
             }
 
@@ -156,7 +156,7 @@ abstract class Command extends SymfonyCommand
             $this->alert($warningMessage);
             $confirmed = $this->confirm(\sprintf('Do you really wish to run command [%s]?', $this->getName()));
 
-            if (! $confirmed) {
+            if (!$confirmed) {
                 $this->comment('Command Canceled!');
 
                 return false;

@@ -16,6 +16,5 @@ final class ConfirmationRequiredWhenApplicationInProduction
 
     public function __invoke(): bool
     {
-
     }
 }
