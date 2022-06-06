@@ -28,6 +28,7 @@ final class Console
 
     public function __construct(
         private readonly ConsoleConfig $config,
+        private readonly CommandManager $commandManager,
         private readonly ?LocatorInterface $locator = null,
         private readonly ContainerInterface $container = new Container()
     ) {
@@ -91,7 +92,11 @@ final class Console
         }
 
         // Register user defined commands
-        $static = new StaticLocator($this->config->getCommands(), $this->container);
+        $static = new StaticLocator(
+            $this->commandManager->getCommands(),
+            $this->container
+        );
+
         $this->addCommands($static->locateCommands());
 
         return $this->application;

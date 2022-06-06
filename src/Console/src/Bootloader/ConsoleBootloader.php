@@ -8,16 +8,11 @@ use Spiral\Boot\AbstractKernel;
 use Spiral\Boot\Bootloader\Bootloader;
 use Spiral\Command\CleanCommand;
 use Spiral\Command\PublishCommand;
-use Spiral\Config\ConfiguratorInterface;
-use Spiral\Config\Patch\Append;
-use Spiral\Config\Patch\Prepend;
 use Spiral\Console\CommandLocator;
-use Spiral\Console\Config\ConsoleConfig;
+use Spiral\Console\CommandManager;
 use Spiral\Console\Console;
 use Spiral\Console\ConsoleDispatcher;
 use Spiral\Console\LocatorInterface;
-use Spiral\Console\Sequence\CallableSequence;
-use Spiral\Console\Sequence\CommandSequence;
 use Spiral\Core\Container\SingletonInterface;
 use Spiral\Core\FactoryInterface;
 use Spiral\Tokenizer\Bootloader\TokenizerBootloader;
@@ -37,7 +32,7 @@ final class ConsoleBootloader extends Bootloader implements SingletonInterface
     ];
 
     public function __construct(
-        private readonly ConfiguratorInterface $config
+        private readonly CommandManager $manager
     ) {
     }
 
@@ -47,14 +42,6 @@ final class ConsoleBootloader extends Bootloader implements SingletonInterface
         $kernel->booted(static function (AbstractKernel $kernel) use ($factory): void {
             $kernel->addDispatcher($factory->make(ConsoleDispatcher::class));
         });
-
-        $this->config->setDefaults(
-            ConsoleConfig::CONFIG,
-            [
-                'commands' => [],
-                'sequences' => [],
-            ]
-        );
 
         $this->addCommand(CleanCommand::class);
         $this->addCommand(PublishCommand::class);
@@ -67,12 +54,7 @@ final class ConsoleBootloader extends Bootloader implements SingletonInterface
      */
     public function addCommand(string $command, bool $lowPriority = false): void
     {
-        $this->config->modify(
-            ConsoleConfig::CONFIG,
-            $lowPriority
-                ? new Prepend('commands', null, $command)
-                : new Append('commands', null, $command)
-        );
+        $this->manager->register($command, $lowPriority);
     }
 
     public function addConfigureSequence(
@@ -100,32 +82,6 @@ final class ConsoleBootloader extends Bootloader implements SingletonInterface
         string $footer = '',
         array $options = []
     ): void {
-        if (!isset($this->config->getConfig(ConsoleConfig::CONFIG)['sequences'][$name])) {
-            $this->config->modify(
-                ConsoleConfig::CONFIG,
-                new Append('sequences', $name, [])
-            );
-        }
-
-        $this->config->modify(
-            ConsoleConfig::CONFIG,
-            $this->sequence('sequences.' . $name, $sequence, $header, $footer, $options)
-        );
-    }
-
-    private function sequence(
-        string $target,
-        string|array|callable $sequence,
-        string $header,
-        string $footer,
-        array $options
-    ): Append {
-        return new Append(
-            $target,
-            null,
-            \is_array($sequence) || \is_callable($sequence)
-                ? new CallableSequence($sequence, $header, $footer)
-                : new CommandSequence($sequence, $options, $header, $footer)
-        );
+        $this->manager->registerSequence($name, $sequence, $header, $footer, $options);
     }
 }

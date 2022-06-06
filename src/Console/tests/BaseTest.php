@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace Spiral\Tests\Console;
 
 use PHPUnit\Framework\TestCase;
+use Spiral\Console\CommandManager;
 use Spiral\Console\Config\ConsoleConfig;
 use Spiral\Console\Console;
 use Spiral\Console\LocatorInterface;
@@ -46,6 +47,7 @@ abstract class BaseTest extends TestCase
     protected function getCore(LocatorInterface $locator = null): Console
     {
         return new Console(
+            $this->container->get(CommandManager::class),
             $this->container->get(ConsoleConfig::class),
             $locator ?? new StaticLocator([], $this->container),
             $this->container

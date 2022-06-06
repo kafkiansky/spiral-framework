@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Spiral\Console;
 
 use Psr\Container\ContainerInterface;
+use Spiral\Attributes\Internal\AttributeReader;
+use Spiral\Console\Attribute\ConfirmationRequired;
+use Spiral\Console\Exception\CommandException;
 use Spiral\Console\Signature\Parser;
 use Spiral\Console\Traits\HelpersTrait;
 use Spiral\Core\Exception\ScopeException;
@@ -54,7 +57,7 @@ abstract class Command extends SymfonyCommand
         try {
             [$this->input, $this->output] = [$input, $output];
 
-            if (!$this->confirmToPerform()) {
+            if (! $this->confirmToPerform()) {
                 return Command::FAILURE;
             }
 
@@ -119,35 +122,45 @@ abstract class Command extends SymfonyCommand
     }
 
     /**
-     * @deprecated will be replaced with attributes
-     */
-    protected function getConfirmationDefinition(): ?ConfirmationDefinitionInterface
-    {
-        return null;
-    }
-
-    /**
      * Will be redesigned in the future for using attributes with different types of confirmation.
      */
     private function confirmToPerform(): bool
     {
-        $definition = $this->getConfirmationDefinition();
-        if ($definition === null || !$definition->shouldBeConfirmed()) {
-            return true;
-        }
-
         if ($this->hasOption('force') && $this->option('force')) {
             return true;
         }
 
-        $this->alert($definition->getWarningMessage());
+        $reader = $this->container->get(AttributeReader::class);
 
-        $confirmed = $this->confirm(\sprintf('Do you really wish to run command [%s]?', $this->getName()));
+        // ConfirmationRequired
+        if ($attribute = $reader->getClassMetadata(new \ReflectionClass($this), ConfirmationRequired::class)) {
+            $definition = $this->container->get($attribute->class);
+            if (! $definition instanceof ConfirmationDefinitionInterface) {
+                throw new CommandException(
+                    \sprintf(
+                        'Confirmation definition `%s` should be instance of `%s`.',
+                        $definition::class,
+                        ConfirmationDefinitionInterface::class
+                    )
+                );
+            }
 
-        if (!$confirmed) {
-            $this->comment('Command Canceled!');
+            if (! $definition->shouldBeConfirmed()) {
+                return true;
+            }
 
-            return false;
+            $warningMessage = $attribute->warningMessage !== null
+                ? $attribute->warningMessage
+                : $definition->getWarningMessage();
+
+            $this->alert($warningMessage);
+            $confirmed = $this->confirm(\sprintf('Do you really wish to run command [%s]?', $this->getName()));
+
+            if (! $confirmed) {
+                $this->comment('Command Canceled!');
+
+                return false;
+            }
         }
 
         return true;
