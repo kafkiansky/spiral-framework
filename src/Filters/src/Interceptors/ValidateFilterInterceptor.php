@@ -55,8 +55,9 @@ class ValidateFilterInterceptor implements CoreInterceptorInterface
                 ->getValidation($definition::class)
                 ->validate($bag, $definition->validationRules(), $context);
 
-            if (!$validator->isValid()) {
+            if (! $validator->isValid()) {
                 throw new ValidationException(
+                    $bag,
                     $errorMapper->mapErrors(\array_merge($errors, $validator->getErrors())),
                     $context
                 );
